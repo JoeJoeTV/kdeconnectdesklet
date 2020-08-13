@@ -142,7 +142,7 @@ const defaultDevice = {
     batteryCharge: 0,
     batteryChargeState: false,
     type: ""
-}
+};
 
 function getBatteryIcon(charge, isCharging) {
     let iconName = "battery-symbolic";
