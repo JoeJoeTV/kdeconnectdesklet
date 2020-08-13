@@ -5,7 +5,6 @@ const St = imports.gi.St;
 const Gtk = imports.gi.Gtk;
 const Main = imports.ui.main;
 const Gio = imports.gi.Gio;
-const Signals = imports.signals;
 const Settings = imports.ui.settings;
 const Extension = imports.ui.extension;
 
@@ -219,12 +218,12 @@ function getDeviceIcon(type) {
     return iconName
 }
 
-function DeviceNotification(deviceID, notificationID, appName, dismissable, hasIcon, iconPath, replyAvailable, replyID, silent, text, title, ticker) {
-    this._init(deviceID, notificationID, appName, dismissable, hasIcon, iconPath, replyAvailable, replyID, silent, text, title, ticker);
+function DeviceNotification(selectedDevice, notificationID, appName, dismissable, hasIcon, iconPath, replyAvailable, replyID, silent, text, title, ticker) {
+    this._init(selectedDevice, notificationID, appName, dismissable, hasIcon, iconPath, replyAvailable, replyID, silent, text, title, ticker);
 }
 
 DeviceNotification.prototype = {
-    _init: function(deviceID, notificationID, appName, dismissable, hasIcon, iconPath, replyAvailable, replyID, silent, text, title, ticker) {
+    _init: function(selectedDevice, notificationID, appName, dismissable, hasIcon, iconPath, replyAvailable, replyID, silent, text, title, ticker) {
         this.notificationID = notificationID;
         this.appName = appName;
         this.dismissable = dismissable;
@@ -233,7 +232,7 @@ DeviceNotification.prototype = {
         this.replyAvailable = replyAvailable;
         this.replyID = replyID;
         this.silent = silent;
-        this.deviceID = deviceID;
+        this.selectedDevice = selectedDevice;
 
         let showText = true;
 
@@ -309,9 +308,8 @@ DeviceNotification.prototype = {
 
     onReplyButtonClicked: function(button, clicked_button) {
         try {
-            let notificationProxy = KDEConnectDeviceNotificationProxy(Gio.DBus.session, "org.kde.kdeconnect", "/modules/kdeconnect/devices/"+this.deviceID+"/notifications/"+this.notificationID);
+            let notificationProxy = KDEConnectDeviceNotificationProxy(Gio.DBus.session, "org.kde.kdeconnect", "/modules/kdeconnect/devices/"+this.selectedDevice.ID+"/notifications/"+this.notificationID);
             notificationProxy.replySync();
-            global.log("[NOTIFICATION] Reply to "+this.notificationID);
         }
         catch (error) {
             global.logError(error);
@@ -320,9 +318,8 @@ DeviceNotification.prototype = {
 
     onDismissButtonClicked: function(button, clicked_button) {
         try {
-            let notificationProxy = KDEConnectDeviceNotificationProxy(Gio.DBus.session, "org.kde.kdeconnect", "/modules/kdeconnect/devices/"+this.deviceID+"/notifications/"+this.notificationID);
+            let notificationProxy = KDEConnectDeviceNotificationProxy(Gio.DBus.session, "org.kde.kdeconnect", "/modules/kdeconnect/devices/"+this.selectedDevice.ID+"/notifications/"+this.notificationID);
             notificationProxy.dismissSync();
-            global.log("[NOTIFICATION] Dismiss "+this.notificationID);
         }
         catch (error) {
             global.logError(error);
@@ -333,10 +330,8 @@ DeviceNotification.prototype = {
         this._dismissButton.disconnect(this._onDismissButtonClicked);
         this._replyButton.disconnect(this._onReplyButtonClicked);
         this.actor.destroy_all_children();
-        this.emit("destroy");
     }
 }
-Signals.addSignalMethods(DeviceNotification.prototype);
 
 function KDEConnectDesklet(metadata, desklet_id) {
 	this._init(metadata, desklet_id);
@@ -352,10 +347,11 @@ KDEConnectDesklet.prototype = {
         this.selectedDevice = {};
         this.selectedDevice = Object.assign(this.selectedDevice, defaultDevice);
         this.deviceList = [];
-        this.DeviceMenuItemSignalList = [];
+        this.DeviceMenuItemSignalList =  [];
         
         this.settings = new Settings.DeskletSettings(this, this.metadata["uuid"], desklet_id);
         
+        //Ckeck if KDEConnect is running by checking if it is available on the DBus
         let dbusNameList = [];
 
         try {
@@ -370,10 +366,8 @@ KDEConnectDesklet.prototype = {
             this.devicesMenuItem = new PopupMenu.PopupSubMenuMenuItem("Available Devices");
             this._menu.addMenuItem(this.devicesMenuItem);
     
-            global.log("["+this.metadata.uuid+"] DESKLET ID: "+desklet_id);
-    
             this.selectedDevice.ID = this.settings.getValue("selected-device-id");
-            global.log("["+this.metadata.uuid+"] LOADED DEVICE ID: "+this.selectedDevice.ID);
+            global.log("["+this.metadata.uuid+"] Loaded Device ID from settings: "+this.selectedDevice.ID);
     
             //this.scale = 1;
             //TODO: Maybe add scale setting, so the applet size can be configured
@@ -404,11 +398,9 @@ KDEConnectDesklet.prototype = {
             
             this.setContent(deskletContainer);            
         }
-
     },
 
     setupUI: function() {
-        global.log("["+this.metadata.uuid+"] SETUP UI");
         try {
             if (this.ui.notifcationListContainer) {
                 this.ui.notifcationListContainer.destroy_all_children();
@@ -494,9 +486,6 @@ KDEConnectDesklet.prototype = {
 
         //TODO: Fix many St Errors (.xsession-errors)
         this.setContent(this.ui.deskletContainer);
-
-        global.log("["+this.metadata.uuid+"] WIDTH: "+this.ui.deskletContainer.width);
-        global.log("["+this.metadata.uuid+"] HEIGHT: "+this.ui.deskletContainer.height);
     },
 
     updateDeviceList: function() {
@@ -540,11 +529,11 @@ KDEConnectDesklet.prototype = {
                 device.Name = deviceNames[deviceIDs[i]];
                 device.isReachable = isReachable;
 
-                global.log("[UPDATE DEVICE LIST] DEVICE: ID: "+device.ID+" NAME: "+device.Name+" TYPE: "+device.type+" BAT?: "+device.supportsBattery+" NOT?: "+device.supportsNotifications+" REACH?: "+device.isReachable);
+                //Debug
+                //global.log("[UPDATE DEVICE LIST] DEVICE: ID: "+device.ID+" NAME: "+device.Name+" TYPE: "+device.type+" BAT?: "+device.supportsBattery+" NOT?: "+device.supportsNotifications+" REACH?: "+device.isReachable);
 
                 if (this.selectedDevice.ID !== "") {
                     if (deviceIDs[i] == this.selectedDevice.ID && selectedDeviceFound == false) {
-                        global.log("["+this.metadata.uuid+"] FOUND MATCHING SELECTED DEVICE");
                         selectedDeviceFound = true;
 
                         this.updateSelectedDevice(device);
@@ -567,7 +556,7 @@ KDEConnectDesklet.prototype = {
 
         this.updateContextMenu();
 
-        global.log("["+this.metadata.uuid+"] UPDATED DEVICE LIST");
+        global.log("["+this.metadata.uuid+"] Updated Device List");
     },
 
     updateContextMenu: function() {
@@ -601,7 +590,6 @@ KDEConnectDesklet.prototype = {
                             deviceMenuItemSignal.menuItem = deviceMenuItem;
                             deviceMenuItemSignal.activateSignal = deviceMenuItem.connect("activate", Lang.bind(this, function() {
                                 try {
-                                    global.log("["+this.metadata.uuid+"] UPDATED SELECTED DEVICE");
                                     this.updateSelectedDevice(currentDevice);
     
                                     this.updateContextMenu();
@@ -642,8 +630,6 @@ KDEConnectDesklet.prototype = {
                 global.logError(error);
             }
         }
-
-        global.log("["+this.metadata.uuid+"] UPDATED BATTERY DATA");
     },
 
     getNotificationData: function() {
@@ -662,7 +648,7 @@ KDEConnectDesklet.prototype = {
                     let kdecDevNotProxy = KDEConnectDeviceNotificationProxy(Gio.DBus.session, "org.kde.kdeconnect", "/modules/kdeconnect/devices/"+this.selectedDevice.ID+"/notifications/"+activeNotifications[i]);
                     
                     let replyAvailable = (kdecDevNotProxy.replyId !== "");
-                    let currentNotification = new DeviceNotification(this.selectedDevice.ID, activeNotifications[i], kdecDevNotProxy.appName, kdecDevNotProxy.dismissable, kdecDevNotProxy.hasIcon, kdecDevNotProxy.iconPath, replyAvailable, kdecDevNotProxy.replyId, kdecDevNotProxy.silent, kdecDevNotProxy.text, kdecDevNotProxy.title, kdecDevNotProxy.ticker);
+                    let currentNotification = new DeviceNotification(this.selectedDevice, activeNotifications[i], kdecDevNotProxy.appName, kdecDevNotProxy.dismissable, kdecDevNotProxy.hasIcon, kdecDevNotProxy.iconPath, replyAvailable, kdecDevNotProxy.replyId, kdecDevNotProxy.silent, kdecDevNotProxy.text, kdecDevNotProxy.title, kdecDevNotProxy.ticker);
 
                     this.selectedDevice.notificationList.push(currentNotification);
                 }
@@ -671,15 +657,13 @@ KDEConnectDesklet.prototype = {
                 global.logError(error);
             }
         }
-
-        global.log("["+this.metadata.uuid+"] UPDATED NOTIFICATION DATA");
     },
 
     updateSelectedDevice: function(newDevice) {
         this.resetSelectedDevice();
 
         this.settings.setValue("selected-device-id", newDevice.ID);
-        global.log("["+this.metadata.uuid+"] UPDATED SETTINGS DEVICE ID: "+newDevice.ID);
+        global.log("["+this.metadata.uuid+"] Updated Device ID setting: "+newDevice.ID);
 
         this.selectedDevice = Object.assign(this.selectedDevice, newDevice);
 
@@ -741,8 +725,6 @@ KDEConnectDesklet.prototype = {
     },
 
     onBatteryStateChanged: function(proxy, sender, [charging]) {
-        global.log("["+this.metadata.uuid+"] BATTERY STATE CHANGED");
-
         this.getBatteryData();
 
         if (this.selectedDevice.supportsBattery == true) {
@@ -758,12 +740,10 @@ KDEConnectDesklet.prototype = {
     },
 
     onAllNotificationsRemoved: function(proxy, sender) {
-        global.log("["+this.metadata.uuid+"] Notifications Updated");
         this.getNotificationData();
     },
 
     onNotificationsUpdated: function(proxy, sender, [publicId]) {
-        global.log("["+this.metadata.uuid+"] Notifications Updated");
         this.getNotificationData();
 
         try {
@@ -783,7 +763,6 @@ KDEConnectDesklet.prototype = {
     },
 
     on_desklet_removed: function() {
-        global.log("["+this.metadata.uuid+"] DESKLET REMOVED");
         this.resetSelectedDevice();
 
         if (typeof this._onDeviceListChanged !== "undefined") {
