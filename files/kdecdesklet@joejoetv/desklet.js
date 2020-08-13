@@ -7,6 +7,8 @@ const Main = imports.ui.main;
 const Gio = imports.gi.Gio;
 const Settings = imports.ui.settings;
 const Extension = imports.ui.extension;
+const GLib = imports.gi.GLib;
+const Gettext = imports.gettext;
 
 const UUID = "kdecdesklet@joejoetv";
 
@@ -218,6 +220,17 @@ function getDeviceIcon(type) {
     return iconName
 }
 
+// l10n/translation support
+Gettext.bindtextdomain(UUID, GLib.get_home_dir() + "/.local/share/locale");
+
+function _(str) {
+    return Gettext.dgettext(UUID, str);
+}
+
+function KDEConnectDesklet(metadata, desklet_id) {
+	this._init(metadata, desklet_id);
+}
+
 function DeviceNotification(selectedDevice, notificationID, appName, dismissable, hasIcon, iconPath, replyAvailable, replyID, silent, text, title, ticker) {
     this._init(selectedDevice, notificationID, appName, dismissable, hasIcon, iconPath, replyAvailable, replyID, silent, text, title, ticker);
 }
@@ -275,7 +288,7 @@ DeviceNotification.prototype = {
         let notificationTitle = new St.Label({style_class: "kdecd-notification-title", text: this.title});
         let notificationText = new St.Label({style_class: "kdecd-notification-text", text: this.text});
         
-        this._replyButton = new St.Button({style_class: "kdecd-notification-reply-button", label: "Reply"});
+        this._replyButton = new St.Button({style_class: "kdecd-notification-reply-button", label: _("Reply")});
         this._onReplyButtonClicked = this._replyButton.connect("clicked", Lang.bind(this, this.onReplyButtonClicked));
 
         let header = new St.BoxLayout({style_class: "kdecd-notification-header-container", vertical: false});
@@ -333,10 +346,6 @@ DeviceNotification.prototype = {
     }
 }
 
-function KDEConnectDesklet(metadata, desklet_id) {
-	this._init(metadata, desklet_id);
-}
-
 KDEConnectDesklet.prototype = {
     __proto__: Desklet.Desklet.prototype,
 
@@ -363,7 +372,7 @@ KDEConnectDesklet.prototype = {
         }
 
         if (dbusNameList.includes("org.kde.kdeconnect")) {
-            this.devicesMenuItem = new PopupMenu.PopupSubMenuMenuItem("Available Devices");
+            this.devicesMenuItem = new PopupMenu.PopupSubMenuMenuItem(_("Available Devices"));
             this._menu.addMenuItem(this.devicesMenuItem);
     
             this.selectedDevice.ID = this.settings.getValue("selected-device-id");
@@ -384,12 +393,12 @@ KDEConnectDesklet.prototype = {
             }
         }
         else {
-            this._menu.addAction("Reload Desklet", Lang.bind(this, this.reloadDesklet));
+            this._menu.addAction(_("Reload Desklet"), Lang.bind(this, this.reloadDesklet));
 
             let deskletContainer = new St.BoxLayout({vertical: false, style_class: "kdecd-desklet-container"});
             let InfoContainer = new St.BoxLayout({vertical: true, style_class: "kdecd-device-info-container"});
             let Icon = new St.Icon({icon_name: "window-close-symbolic", icon_size: 96, icon_type: St.IconType.SYMBOLIC, style_class: "kdecd-device-icon-gray", y_expand: true});
-            let Label = new St.Label({text: "KDEConnect is not running!", style_class: "kdecd-device-name-gray"});
+            let Label = new St.Label({text: _("KDEConnect is not running!"), style_class: "kdecd-device-name-gray"});
             
             InfoContainer.add(Label);
             InfoContainer.add(Icon);
@@ -439,7 +448,7 @@ KDEConnectDesklet.prototype = {
             }
         }
         else {
-            deviceName = "No Device Selected!";
+            deviceName = _("No Device Selected!");
             deviceNameStyleClass = "kdecd-device-name-gray";
             deviceIcon = "window-close-symbolic";
             deviceIconStyleClass = "kdecd-device-icon-gray";
@@ -568,7 +577,7 @@ KDEConnectDesklet.prototype = {
         this.devicesMenuItem.menu.removeAll();
 
         if (this.deviceList.length == 0) {
-            let noReachableDevicesMenuItem = new PopupMenu.PopupMenuItem("No paired devices!", {reactive: false});
+            let noReachableDevicesMenuItem = new PopupMenu.PopupMenuItem(_("No paired devices!"), {reactive: false});
             noReachableDevicesMenuItem.setSensitive(false);
             this.devicesMenuItem.menu.addMenuItem(noReachableDevicesMenuItem);
         }

@@ -1,7 +1,7 @@
 {
     "uuid": "kdecdesklet@joejoetv",
     "name": "KDEConnect Desklet",
-    "description": "KDEConnect Desklet",
+    "description": "Desklet for displaying information about a Device connected with KDeConnect.",
     "icon": "kdeconnect",
     "comments": "",
     "version": "0.1",
