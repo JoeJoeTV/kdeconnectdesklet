@@ -1,5 +1,5 @@
 A Cinnamon Desklet for showing information about a Device connected via KDEConnect, like Battery Charge and Notifications.
-https://github.com/linuxmint/cinnamon-spices-applets/tree/master/kdecapplet@joejoetv
+https://github.com/linuxmint/cinnamon-spices-desklets/tree/master/kdecdesklet@joejoetv
 
 ## Requirements
 KDE Connect needs to be installed.
@@ -12,4 +12,4 @@ Once you added the Desklet to your Desktop, right click it and select your Devic
 After your selected your Device, you can see information about it and manage notifications(dismiss and reply to them).
 
 
-**If you find any bugs, please report them [here](https://github.com/linuxmint/cinnamon-spices-applets/tree/master/kdecapplet@joejoetv)**
+**If you find any bugs, please report them [here](https://github.com/linuxmint/cinnamon-spices-desklets/tree/master/kdecdesklet@joejoetv)**
